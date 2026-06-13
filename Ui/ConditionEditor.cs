@@ -1,0 +1,394 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using ExileCore2.Shared.Helpers;
+using ExilesAutoCore.Rules;
+using ExilesAutoCore.State;
+using ImGuiNET;
+
+namespace ExilesAutoCore.Ui;
+
+/// <summary>
+/// Draws and edits a list of <see cref="Condition"/>s through dropdowns — no typing of code. Shared
+/// by the rule builder and the combo-step builder. Each row shows only the inputs its kind needs,
+/// with a live dot indicating whether that condition currently passes.
+/// </summary>
+public static class ConditionEditor
+{
+    /// <summary>Set per-frame by the plugin. When true, the expanded editor shows the raw kind dropdown.</summary>
+    public static bool AdvancedMode;
+
+    public static void Draw(List<Condition> conditions, GameState state)
+    {
+        var toDelete = -1;
+        for (var i = 0; i < conditions.Count; i++)
+        {
+            ImGui.PushID(i);
+            if (DrawCondition(conditions[i], state))
+            {
+                toDelete = i;
+            }
+
+            ImGui.PopID();
+        }
+
+        if (toDelete >= 0)
+        {
+            conditions.RemoveAt(toDelete);
+        }
+
+        // Grouped "Add condition" menu: pick by category instead of a flat list of technical names.
+        if (ImGui.Button("Add condition"))
+        {
+            ImGui.OpenPopup("addCondition");
+        }
+
+        if (ImGui.BeginPopup("addCondition"))
+        {
+            if (ImGui.BeginMenu("Presets"))
+            {
+                foreach (var preset in ConditionPresets.All)
+                {
+                    if (ImGui.MenuItem(preset.Label))
+                    {
+                        conditions.AddRange(preset.Build());
+                    }
+                }
+
+                ImGui.EndMenu();
+            }
+
+            ImGui.Separator();
+
+            foreach (var category in Enum.GetValues<ConditionCategory>())
+            {
+                if (!ImGui.BeginMenu(category.ToString()))
+                {
+                    continue;
+                }
+
+                foreach (var entry in ConditionMeta.InCategory(category))
+                {
+                    if (ImGui.MenuItem(entry.Label))
+                    {
+                        conditions.Add(new Condition { Kind = entry.Kind });
+                    }
+                }
+
+                ImGui.EndMenu();
+            }
+
+            ImGui.EndPopup();
+        }
+    }
+
+    /// <summary>Draws one condition row with only the inputs its kind needs. Returns true to delete.</summary>
+    private static bool DrawCondition(Condition c, GameState state)
+    {
+        Controls.StatusDot(c.Evaluate(state));
+        ImGui.SameLine();
+
+        // Collapsed = a category-coloured plain-English summary; expand to edit the details.
+        ImGui.PushStyleColor(ImGuiCol.Text, CategoryColor(ConditionMeta.CategoryOf(c.Kind)).ToImguiVec4());
+        var open = ImGui.TreeNodeEx($"{c.Describe()}###cond");
+        ImGui.PopStyleColor();
+
+        ImGui.SameLine();
+        var delete = ImGui.SmallButton("x");
+
+        if (!open)
+        {
+            return delete;
+        }
+
+        ImGui.Indent();
+        if (AdvancedMode)
+        {
+            ImGui.SetNextItemWidth(170);
+            Controls.EnumCombo("##kind", ref c.Kind);
+        }
+        else
+        {
+            ImGui.TextUnformatted(ConditionMeta.LabelOf(c.Kind));
+        }
+
+        switch (c.Kind)
+        {
+            case ConditionKind.LifePercent:
+            case ConditionKind.EnergyShieldPercent:
+            case ConditionKind.ManaPercent:
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.PlayerHasBuff:
+            case ConditionKind.PlayerMissingBuff:
+                SameLineText(c, "buff name");
+                break;
+
+            case ConditionKind.PlayerBuffCharges:
+            case ConditionKind.PlayerBuffTimeLeft:
+                SameLineText(c, "buff name");
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.PlayerHasAilment:
+                SameLineAilmentPicker(c);
+                break;
+
+            case ConditionKind.MonsterCount:
+                SameLineRange(c);
+                SameLineRarity(c);
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.SkillReady:
+            case ConditionKind.SkillUsing:
+            case ConditionKind.SkillNotUsing:
+            case ConditionKind.SkillOffCooldown:
+            case ConditionKind.SkillManaAvailable:
+                SameLineSkillPicker(c, state);
+                break;
+
+            case ConditionKind.SkillUseStage:
+                SameLineSkillPicker(c, state);
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.WeaponSet:
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.IsMoving:
+                SameLineMovingToggle(c);
+                break;
+
+            case ConditionKind.MouseButtonHeld:
+                SameLineMouseButton(c);
+                break;
+
+            case ConditionKind.MonstersNearCursor:
+                SameLineRange(c);
+                SameLineRarity(c);
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.CursorDistance:
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.MonsterHasBuff:
+            case ConditionKind.MonsterMissingBuff:
+                SameLineRange(c);
+                SameLineRarity(c);
+                SameLineText(c, "buff/debuff name");
+                break;
+
+            case ConditionKind.MonsterHeavyStunned:
+            case ConditionKind.MonsterLifePercent:
+                SameLineRange(c);
+                SameLineRarity(c);
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.MonsterIsTargeted:
+            case ConditionKind.MonsterIsTargetable:
+            case ConditionKind.MonsterInvincible:
+                SameLineRange(c);
+                SameLineRarity(c);
+                break;
+
+            case ConditionKind.FlaskActive:
+            case ConditionKind.FlaskReady:
+                SameLineFlaskSlot(c);
+                break;
+
+            case ConditionKind.FlaskCharges:
+                SameLineFlaskSlot(c);
+                SameLineComparison(c);
+                SameLineValue(c);
+                break;
+
+            case ConditionKind.InTown:
+                SameLineBool(c, "in town", "not in town");
+                break;
+
+            case ConditionKind.InHideout:
+                SameLineBool(c, "in hideout", "not in hideout");
+                break;
+
+            case ConditionKind.InPeacefulArea:
+                SameLineBool(c, "in peaceful area", "not peaceful");
+                break;
+
+            case ConditionKind.ChatOpen:
+                SameLineBool(c, "chat open", "chat closed");
+                break;
+
+            case ConditionKind.PanelOpen:
+                SameLineBool(c, "panel open", "no panel open");
+                break;
+
+            // HoveringMonster needs no extra inputs.
+        }
+
+        ImGui.Unindent();
+        ImGui.TreePop();
+        return delete;
+    }
+
+    // Tints a condition's summary by its category so a step's conditions are scannable at a glance.
+    private static Color CategoryColor(ConditionCategory category) => category switch
+    {
+        ConditionCategory.Monster => Color.IndianRed,
+        ConditionCategory.Skill => Color.YellowGreen,
+        ConditionCategory.Player => Color.Gainsboro,
+        ConditionCategory.Cursor => Color.MediumPurple,
+        ConditionCategory.Input => Color.Goldenrod,
+        ConditionCategory.Flask => Color.SkyBlue,
+        ConditionCategory.Area => Color.MediumAquamarine,
+        _ => Color.Gainsboro,
+    };
+
+    // --- Per-field inputs (each continues the condition's row) ---------------------------------
+
+    private static void SameLineComparison(Condition c)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(110);
+        var ops = Enum.GetValues<Comparison>();
+        var labels = ops.Select(ConditionMeta.Word).ToArray();
+        var index = Array.IndexOf(ops, c.Operator);
+        if (index < 0)
+        {
+            index = 0;
+        }
+
+        if (ImGui.Combo("##op", ref index, labels, labels.Length))
+        {
+            c.Operator = ops[index];
+        }
+    }
+
+    private static void SameLineValue(Condition c)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(80);
+        ImGui.InputFloat("##value", ref c.Value);
+    }
+
+    private static void SameLineText(Condition c, string hint)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(190);
+        ImGui.InputTextWithHint("##text", hint, ref c.Text, 64);
+    }
+
+    private static void SameLineRange(Condition c)
+    {
+        ImGui.SameLine();
+        ImGui.Text("within");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(80);
+        ImGui.InputInt("##range", ref c.Range);
+    }
+
+    private static void SameLineRarity(Condition c)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(120);
+        Controls.EnumCombo("##rarity", ref c.Rarity);
+    }
+
+    private static void SameLineAilmentPicker(Condition c)
+    {
+        ImGui.SameLine();
+        var names = Ailments.Names.ToArray();
+        var current = Array.IndexOf(names, c.Text);
+        ImGui.SetNextItemWidth(150);
+        if (ImGui.Combo("##ailment", ref current, names, names.Length) && current >= 0)
+        {
+            c.Text = names[current];
+        }
+
+        SameLineBool(c, "is affected", "not affected");
+    }
+
+    private static void SameLineFlaskSlot(Condition c)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(110);
+        var index = c.FlaskSlot <= 1 ? 0 : 1;
+        string[] options = { "Flask 1", "Flask 2" };
+        if (ImGui.Combo("##flask", ref index, options, options.Length))
+        {
+            c.FlaskSlot = index + 1;
+        }
+    }
+
+    // A two-option toggle for boolean conditions (e.g. "in town" / "not in town").
+    private static void SameLineBool(Condition c, string trueLabel, string falseLabel)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(150);
+        var index = c.BoolValue ? 0 : 1;
+        string[] options = { trueLabel, falseLabel };
+        if (ImGui.Combo("##bool", ref index, options, options.Length))
+        {
+            c.BoolValue = index == 0;
+        }
+    }
+
+    private static void SameLineMouseButton(Condition c)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(110);
+        Controls.EnumCombo("##mousebtn", ref c.MouseButton);
+    }
+
+    private static void SameLineMovingToggle(Condition c)
+    {
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(140);
+        var index = c.BoolValue ? 0 : 1;
+        string[] options = { "is moving", "is stationary" };
+        if (ImGui.Combo("##moving", ref index, options, options.Length))
+        {
+            c.BoolValue = index == 0;
+        }
+    }
+
+    // Offers a dropdown of the player's slotted skills; falls back to free text when not in game.
+    private static void SameLineSkillPicker(Condition c, GameState state)
+    {
+        ImGui.SameLine();
+        var skills = state.Skills.AllSkills;
+        if (skills.Count == 0)
+        {
+            SameLineText(c, "skill name");
+            return;
+        }
+
+        var names = skills.Select(s => s.Name).ToArray();
+        var current = Array.IndexOf(names, c.Text);
+        ImGui.SetNextItemWidth(190);
+        if (ImGui.Combo("##skill", ref current, names, names.Length) && current >= 0)
+        {
+            c.Text = names[current];
+        }
+
+        if (current < 0)
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(Color.Gray.ToImguiVec4(), string.IsNullOrEmpty(c.Text) ? "(pick a skill)" : $"({c.Text})");
+        }
+    }
+}
