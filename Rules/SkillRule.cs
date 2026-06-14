@@ -16,6 +16,13 @@ public sealed class SkillRule
     public bool Enabled = true;
     public string Name = "New rule";
 
+    // Which area types the rule may fire in. Defaults to Maps-only so a fresh rule never acts in
+    // town/hideout by accident. Mirrors ReAgent's per-group EnabledIn* toggles.
+    public bool EnabledInMaps = true;
+    public bool EnabledInTown = false;
+    public bool EnabledInHideout = false;
+    public bool EnabledInPeacefulAreas = false;
+
     /// <summary>What happens when the rule fires.</summary>
     public SkillAction Action = new();
 
@@ -30,6 +37,10 @@ public sealed class SkillRule
 
     /// <summary>True when every condition currently passes (an empty list counts as true).</summary>
     public bool Matches(GameState state) => Conditions.All(c => c.Evaluate(state));
+
+    /// <summary>True if this rule is allowed to fire in the player's current area type.</summary>
+    public bool ActiveInCurrentArea(GameState state) => AreaFilter.Allows(
+        state, EnabledInMaps, EnabledInTown, EnabledInHideout, EnabledInPeacefulAreas);
 
     /// <summary>True while the rule is still inside its own cooldown window and shouldn't fire yet.</summary>
     public bool OnCooldown => Cooldown > 0 && _sinceFire.IsRunning && _sinceFire.Elapsed.TotalSeconds < Cooldown;

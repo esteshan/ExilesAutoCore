@@ -20,6 +20,12 @@ public sealed class Combo
     public string Name = "New combo";
     public List<ComboStep> Steps = new();
 
+    // Which area types the combo may run in. Defaults to Maps-only, like SkillRule.
+    public bool EnabledInMaps = true;
+    public bool EnabledInTown = false;
+    public bool EnabledInHideout = false;
+    public bool EnabledInPeacefulAreas = false;
+
     /// <summary>If the sequence makes no progress for this long, it resets to the first step (0 = never).</summary>
     public int ResetAfterIdleMs = 2000;
 
@@ -30,6 +36,10 @@ public sealed class Combo
 
     /// <summary>Which step the combo is currently waiting to fire (for the UI).</summary>
     public int CurrentStep => _currentStep;
+
+    /// <summary>True if this combo is allowed to run in the player's current area type.</summary>
+    public bool ActiveInCurrentArea(GameState state) => AreaFilter.Allows(
+        state, EnabledInMaps, EnabledInTown, EnabledInHideout, EnabledInPeacefulAreas);
 
     /// <summary>
     /// Returns the step to fire right now, or null if the combo should keep waiting. Also resets a

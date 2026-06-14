@@ -55,7 +55,7 @@ public sealed class RuleBuilder
     {
         var edit = RuleEdit.None;
 
-        Controls.StatusDot(rule.Enabled && rule.Matches(state));
+        Controls.StatusDot(rule.Enabled && rule.ActiveInCurrentArea(state) && rule.Matches(state));
         ImGui.SameLine();
 
         // Priority number + reorder buttons.
@@ -76,7 +76,8 @@ public sealed class RuleBuilder
         ImGui.Checkbox("##enabled", ref rule.Enabled);
         ImGui.SameLine();
 
-        if (!ImGui.CollapsingHeader($"{rule.Name}  (key {rule.Action.InputLabel})###rule"))
+        var areaBadge = AreaFilter.Badge(rule.EnabledInMaps, rule.EnabledInTown, rule.EnabledInHideout, rule.EnabledInPeacefulAreas);
+        if (!ImGui.CollapsingHeader($"{areaBadge} {rule.Name}  (key {rule.Action.InputLabel})###rule"))
         {
             return edit;
         }
@@ -85,6 +86,8 @@ public sealed class RuleBuilder
 
         ImGui.SetNextItemWidth(220);
         ImGui.InputText("Name", ref rule.Name, 40);
+
+        Controls.AreaToggles(ref rule.EnabledInMaps, ref rule.EnabledInTown, ref rule.EnabledInHideout, ref rule.EnabledInPeacefulAreas);
 
         SkillActionEditor.Draw(rule.Action);
 

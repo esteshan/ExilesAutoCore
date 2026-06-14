@@ -42,13 +42,14 @@ public sealed class ComboBuilder
     /// <summary>Draws one combo. Returns true if the user pressed its Delete button.</summary>
     private static bool DrawCombo(Combo combo, GameState state)
     {
-        Controls.StatusDot(combo.Enabled);
+        Controls.StatusDot(combo.Enabled && combo.ActiveInCurrentArea(state));
         ImGui.SameLine();
         ImGui.Checkbox("##enabled", ref combo.Enabled);
         ImGui.SameLine();
 
+        var areaBadge = AreaFilter.Badge(combo.EnabledInMaps, combo.EnabledInTown, combo.EnabledInHideout, combo.EnabledInPeacefulAreas);
         var progress = combo.Steps.Count == 0 ? "no steps" : $"step {combo.CurrentStep + 1}/{combo.Steps.Count}";
-        if (!ImGui.CollapsingHeader($"{combo.Name}  ({progress})###combo"))
+        if (!ImGui.CollapsingHeader($"{areaBadge} {combo.Name}  ({progress})###combo"))
         {
             return false;
         }
@@ -58,6 +59,8 @@ public sealed class ComboBuilder
 
         ImGui.SetNextItemWidth(220);
         ImGui.InputText("Name", ref combo.Name, 40);
+
+        Controls.AreaToggles(ref combo.EnabledInMaps, ref combo.EnabledInTown, ref combo.EnabledInHideout, ref combo.EnabledInPeacefulAreas);
 
         ImGui.SetNextItemWidth(120);
         ImGui.InputInt("Reset if idle (ms, 0 = never)", ref combo.ResetAfterIdleMs);

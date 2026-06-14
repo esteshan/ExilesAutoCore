@@ -55,7 +55,7 @@ public sealed class Engine
     {
         foreach (var rule in rules)
         {
-            if (!rule.Enabled || rule.OnCooldown || !rule.Matches(state))
+            if (!rule.Enabled || !rule.ActiveInCurrentArea(state) || rule.OnCooldown || !rule.Matches(state))
             {
                 continue;
             }
@@ -73,7 +73,7 @@ public sealed class Engine
     {
         foreach (var combo in combos)
         {
-            if (!combo.Enabled)
+            if (!combo.Enabled || !combo.ActiveInCurrentArea(state))
             {
                 continue;
             }

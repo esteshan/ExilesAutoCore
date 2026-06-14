@@ -25,4 +25,21 @@ public static class Controls
     {
         ImGui.TextColored((on ? Color.Lime : Color.Gray).ToImguiVec4(), on ? "(*)" : "( )");
     }
+
+    /// <summary>
+    /// The four "active in which area types" checkboxes on one line, mirroring ReAgent's group
+    /// toggles. Shared by the rule and combo builders.
+    /// </summary>
+    public static void AreaToggles(ref bool inMaps, ref bool inTown, ref bool inHideout, ref bool inPeaceful)
+    {
+        ImGui.TextColored(Color.Gray.ToImguiVec4(), "Active in:");
+        ImGui.SameLine();
+        ImGui.Checkbox("Maps", ref inMaps);
+        ImGui.SameLine();
+        ImGui.Checkbox("Town", ref inTown);
+        ImGui.SameLine();
+        ImGui.Checkbox("Hideout", ref inHideout);
+        ImGui.SameLine();
+        ImGui.Checkbox("Other peaceful", ref inPeaceful);
+    }
 }
