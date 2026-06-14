@@ -24,6 +24,15 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
     private readonly ComboBuilder _comboBuilder = new();
     private readonly Engine _engine = new();
 
+    // What kind of item a pending file dialog is importing/exporting. Lets the one set of STA-thread
+    // dialog plumbing serve whole profiles as well as individual rules and combos.
+    private enum DialogTarget
+    {
+        Profile,
+        Rule,
+        Combo,
+    }
+
     // Transient confirmation/error shown in the profile bar after an import/export, with its expiry.
     private string _profileBarStatus = "";
     private Vector4 _profileBarStatusColor;
@@ -35,7 +44,8 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
     private volatile string _dialogResultPath;
     private volatile bool _dialogComplete;
     private bool _dialogIsImport;
-    private Profile _dialogExportProfile;
+    private DialogTarget _dialogTarget;
+    private object _dialogExportItem;
 
     // The DLL-embedded zip of included_builds is extracted into the user's builds folder once per session.
     private const string IncludedBuildsResource = "ExilesAutoCore.included_builds.zip";
@@ -88,6 +98,25 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
         var resolved = Directory.Exists(root) ? root : baseDir;
         SeedIncludedBuilds(resolved);
         return resolved;
+    }
+
+    // CombosAndRules/ lives next to builds/ under ConfigDirectory and is where single rules/combos are
+    // exported to and imported from, keeping them separate from whole-profile build files. Created on
+    // demand; falls back to the base config dir if it can't be made.
+    private string EnsureCombosAndRulesFolder()
+    {
+        var baseDir = string.IsNullOrEmpty(ConfigDirectory) ? DirectoryFullName : ConfigDirectory;
+        var root = Path.Combine(baseDir, "CombosAndRules");
+        try
+        {
+            Directory.CreateDirectory(root);
+        }
+        catch
+        {
+            // Permissions or a read-only location — fall back to the base directory below.
+        }
+
+        return Directory.Exists(root) ? root : baseDir;
     }
 
     // Extracts the builds bundled in the DLL (included_builds.zip) into the user's builds folder. Runs once
@@ -163,12 +192,20 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
             if (ImGui.CollapsingHeader("Automation rules", ImGuiTreeNodeFlags.DefaultOpen))
             {
                 DrawAutomationStatus();
-                _ruleBuilder.Draw(profile.Rules, state);
+                _ruleBuilder.Draw(
+                    profile.Rules,
+                    state,
+                    onImport: () => BeginFileDialog(isImport: true, DialogTarget.Rule, exportItem: null),
+                    onExport: rule => BeginFileDialog(isImport: false, DialogTarget.Rule, exportItem: rule));
             }
 
             if (ImGui.CollapsingHeader("Combos", ImGuiTreeNodeFlags.DefaultOpen))
             {
-                _comboBuilder.Draw(profile.Combos, state);
+                _comboBuilder.Draw(
+                    profile.Combos,
+                    state,
+                    onImport: () => BeginFileDialog(isImport: true, DialogTarget.Combo, exportItem: null),
+                    onExport: combo => BeginFileDialog(isImport: false, DialogTarget.Combo, exportItem: combo));
             }
         }
         finally
@@ -253,13 +290,13 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
         ImGui.BeginDisabled(dialogBusy);
         if (ImGui.Button("Export profile"))
         {
-            BeginFileDialog(isImport: false, profile: ActiveProfile());
+            BeginFileDialog(isImport: false, DialogTarget.Profile, exportItem: ActiveProfile());
         }
 
         ImGui.SameLine();
         if (ImGui.Button("Import profile"))
         {
-            BeginFileDialog(isImport: true, profile: null);
+            BeginFileDialog(isImport: true, DialogTarget.Profile, exportItem: null);
         }
 
         ImGui.EndDisabled();
@@ -300,8 +337,9 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
     }
 
     // Kicks off a native file dialog on a background STA thread and returns immediately. The result is
-    // collected later by ProcessPendingDialog so the render thread is never blocked.
-    private void BeginFileDialog(bool isImport, Profile profile)
+    // collected later by ProcessPendingDialog so the render thread is never blocked. The same plumbing
+    // serves profiles, rules, and combos — only the target and the exported item differ.
+    private void BeginFileDialog(bool isImport, DialogTarget target, object exportItem)
     {
         if (_dialogThread != null)
         {
@@ -309,17 +347,26 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
         }
 
         _dialogIsImport = isImport;
-        _dialogExportProfile = profile;
+        _dialogTarget = target;
+        _dialogExportItem = exportItem;
         _dialogResultPath = null;
         _dialogComplete = false;
 
-        var suggestedName = profile != null ? SanitizeFileName(profile.Name) : null;
-        var initialDir = EnsureBuildsFolder(); // computed here — DirectoryFullName is render-thread safe
+        var suggestedName = exportItem switch
+        {
+            Profile p => SanitizeFileName(p.Name),
+            SkillRule r => SanitizeFileName(r.Name),
+            Combo c => SanitizeFileName(c.Name),
+            _ => null,
+        };
+        // Computed here on the render thread (DirectoryFullName isn't background-thread safe). Single
+        // rules/combos open the CombosAndRules folder; whole profiles open the builds tree.
+        var initialDir = target == DialogTarget.Profile ? EnsureBuildsFolder() : EnsureCombosAndRulesFolder();
         _dialogThread = new Thread(() =>
         {
             try
             {
-                _dialogResultPath = RunFileDialog(save: !isImport, suggestedName: suggestedName, initialDir: initialDir);
+                _dialogResultPath = RunFileDialog(save: !isImport, target: target, suggestedName: suggestedName, initialDir: initialDir);
             }
             finally
             {
@@ -345,33 +392,111 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
         var path = _dialogResultPath;
         if (path == null)
         {
+            _dialogExportItem = null;
             return; // user cancelled
         }
 
         if (_dialogIsImport)
         {
-            ImportProfileFromPath(path);
+            switch (_dialogTarget)
+            {
+                case DialogTarget.Rule:
+                    ImportRuleFromPath(path);
+                    break;
+                case DialogTarget.Combo:
+                    ImportComboFromPath(path);
+                    break;
+                default:
+                    ImportProfileFromPath(path);
+                    break;
+            }
         }
         else
         {
-            ExportProfileToPath(_dialogExportProfile, path);
+            ExportItemToPath(_dialogExportItem, path);
         }
 
-        _dialogExportProfile = null;
+        _dialogExportItem = null;
     }
 
-    // Writes the profile to the chosen .json file so it can be shared as a file.
-    private void ExportProfileToPath(Profile profile, string path)
+    // Writes the item (profile, rule, or combo) to the chosen .json file so it can be shared as a file.
+    // Serialization is identical for all three — only runtime-private fields are skipped, which is exactly
+    // what we want to share.
+    private void ExportItemToPath(object item, string path)
     {
         try
         {
-            var json = JsonConvert.SerializeObject(profile, Formatting.Indented);
+            var json = JsonConvert.SerializeObject(item, Formatting.Indented);
             File.WriteAllText(path, json);
             SetProfileBarStatus($"Exported to {Path.GetFileName(path)}", Color.Lime.ToImguiVec4());
         }
         catch (Exception e)
         {
             SetProfileBarStatus($"Export failed: {e.Message}", Color.Salmon.ToImguiVec4());
+        }
+    }
+
+    // Reads a single rule from the chosen .json file and appends it to the active profile. Any failure
+    // leaves Settings untouched and reports the reason in the profile bar.
+    private void ImportRuleFromPath(string path)
+    {
+        try
+        {
+            var rule = JsonConvert.DeserializeObject<SkillRule>(File.ReadAllText(path));
+            if (rule == null)
+            {
+                SetProfileBarStatus("Import failed: file did not contain a rule.", Color.Salmon.ToImguiVec4());
+                return;
+            }
+
+            rule.Action ??= new SkillAction();
+            rule.Conditions ??= new List<Condition>();
+
+            var profile = ActiveProfile();
+            rule.Name = UniqueName(string.IsNullOrWhiteSpace(rule.Name) ? "Imported rule" : rule.Name,
+                profile.Rules.Select(r => r.Name).ToHashSet());
+
+            profile.Rules.Add(rule);
+            SetProfileBarStatus($"Imported rule \"{rule.Name}\"", Color.Lime.ToImguiVec4());
+        }
+        catch (Exception e)
+        {
+            SetProfileBarStatus($"Import failed: {e.Message}", Color.Salmon.ToImguiVec4());
+        }
+    }
+
+    // Reads a single combo from the chosen .json file and appends it to the active profile. Any failure
+    // leaves Settings untouched and reports the reason in the profile bar.
+    private void ImportComboFromPath(string path)
+    {
+        try
+        {
+            var combo = JsonConvert.DeserializeObject<Combo>(File.ReadAllText(path));
+            if (combo == null)
+            {
+                SetProfileBarStatus("Import failed: file did not contain a combo.", Color.Salmon.ToImguiVec4());
+                return;
+            }
+
+            combo.Steps ??= new List<ComboStep>();
+            foreach (var step in combo.Steps)
+            {
+                step.Action ??= new SkillAction();
+                step.Conditions ??= new List<Condition>();
+            }
+
+            combo.Reset(); // clear any sequence progress that rode along in the file
+
+            var profile = ActiveProfile();
+            combo.Name = UniqueName(string.IsNullOrWhiteSpace(combo.Name) ? "Imported combo" : combo.Name,
+                profile.Combos.Select(c => c.Name).ToHashSet());
+
+            profile.Combos.Add(combo);
+            SetProfileBarStatus($"Imported combo \"{combo.Name}\"", Color.Lime.ToImguiVec4());
+        }
+        catch (Exception e)
+        {
+            SetProfileBarStatus($"Import failed: {e.Message}", Color.Salmon.ToImguiVec4());
         }
     }
 
@@ -391,7 +516,8 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
             // Guard against nulls so the rest of the plugin can assume these lists always exist.
             profile.Rules ??= new List<SkillRule>();
             profile.Combos ??= new List<Combo>();
-            profile.Name = UniqueProfileName(string.IsNullOrWhiteSpace(profile.Name) ? "Imported profile" : profile.Name);
+            profile.Name = UniqueName(string.IsNullOrWhiteSpace(profile.Name) ? "Imported profile" : profile.Name,
+                Settings.Profiles.Select(p => p.Name).ToHashSet());
 
             Settings.Profiles.Add(profile);
             Settings.ActiveProfileIndex = Settings.Profiles.Count - 1;
@@ -406,8 +532,15 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
 
     // Shows the actual WinForms dialog (already on an STA thread). A topmost owner form keeps the dialog in
     // front of the game overlay. Returns the chosen path, or null if the user cancelled.
-    private static string RunFileDialog(bool save, string suggestedName, string initialDir)
+    private static string RunFileDialog(bool save, DialogTarget target, string suggestedName, string initialDir)
     {
+        var noun = target switch
+        {
+            DialogTarget.Rule => "rule",
+            DialogTarget.Combo => "combo",
+            _ => "profile",
+        };
+
         using var owner = new System.Windows.Forms.Form
         {
             TopMost = true,
@@ -424,20 +557,20 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
             {
                 using var dialog = new System.Windows.Forms.SaveFileDialog
                 {
-                    Title = "Export profile",
-                    Filter = "ExilesAutoCore profile (*.json)|*.json",
+                    Title = $"Export {noun}",
+                    Filter = $"ExilesAutoCore {noun} (*.json)|*.json",
                     DefaultExt = "json",
                     AddExtension = true,
                     InitialDirectory = initialDir,
-                    FileName = string.IsNullOrWhiteSpace(suggestedName) ? "profile" : suggestedName,
+                    FileName = string.IsNullOrWhiteSpace(suggestedName) ? noun : suggestedName,
                 };
                 return dialog.ShowDialog(owner) == System.Windows.Forms.DialogResult.OK ? dialog.FileName : null;
             }
 
             using var openDialog = new System.Windows.Forms.OpenFileDialog
             {
-                Title = "Import profile",
-                Filter = "ExilesAutoCore profile (*.json)|*.json",
+                Title = $"Import {noun}",
+                Filter = $"ExilesAutoCore {noun} (*.json)|*.json",
                 CheckFileExists = true,
                 InitialDirectory = initialDir,
             };
@@ -461,10 +594,10 @@ public sealed class ExilesAutoCore : BaseSettingsPlugin<ExilesAutoCoreSettings>
         return cleaned.Length == 0 ? "profile" : cleaned;
     }
 
-    // Appends " (imported)" / a counter so an imported profile never silently shadows an existing name.
-    private string UniqueProfileName(string desired)
+    // Appends " (imported)" / a counter so an imported item never silently shadows an existing name in
+    // the set it's joining (profiles, a profile's rules, or a profile's combos).
+    private static string UniqueName(string desired, HashSet<string> existing)
     {
-        var existing = Settings.Profiles.Select(p => p.Name).ToHashSet();
         if (!existing.Contains(desired))
         {
             return desired;

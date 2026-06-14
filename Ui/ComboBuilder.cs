@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using ExileCore2.Shared.Helpers;
@@ -14,18 +15,26 @@ namespace ExilesAutoCore.Ui;
 /// </summary>
 public sealed class ComboBuilder
 {
-    public void Draw(List<Combo> combos, GameState state)
+    /// <param name="onImport">Opens an import dialog and appends the imported combo to <paramref name="combos"/>.</param>
+    /// <param name="onExport">Opens an export dialog for the given combo.</param>
+    public void Draw(List<Combo> combos, GameState state, Action onImport, Action<Combo> onExport)
     {
         if (ImGui.Button("Add combo"))
         {
             combos.Add(new Combo());
         }
 
+        ImGui.SameLine();
+        if (ImGui.Button("Import combo"))
+        {
+            onImport();
+        }
+
         var comboToDelete = -1;
         for (var i = 0; i < combos.Count; i++)
         {
             ImGui.PushID(i);
-            if (DrawCombo(combos[i], state))
+            if (DrawCombo(combos[i], state, onExport))
             {
                 comboToDelete = i;
             }
@@ -40,11 +49,17 @@ public sealed class ComboBuilder
     }
 
     /// <summary>Draws one combo. Returns true if the user pressed its Delete button.</summary>
-    private static bool DrawCombo(Combo combo, GameState state)
+    private static bool DrawCombo(Combo combo, GameState state, Action<Combo> onExport)
     {
         Controls.StatusDot(combo.Enabled && combo.ActiveInCurrentArea(state));
         ImGui.SameLine();
         ImGui.Checkbox("##enabled", ref combo.Enabled);
+        ImGui.SameLine();
+        if (ImGui.SmallButton("exp"))
+        {
+            onExport(combo);
+        }
+
         ImGui.SameLine();
 
         var areaBadge = AreaFilter.Badge(combo.EnabledInMaps, combo.EnabledInTown, combo.EnabledInHideout, combo.EnabledInPeacefulAreas);
@@ -70,10 +85,17 @@ public sealed class ComboBuilder
         DrawSteps(combo, state);
 
         ImGui.Separator();
+        if (ImGui.Button("Export combo"))
+        {
+            onExport(combo);
+        }
+
+        ImGui.SameLine();
         if (ImGui.Button("Delete combo"))
         {
             delete = true;
         }
+        // (Export is also on the header row as "exp" so it's reachable without expanding the combo.)
 
         ImGui.Unindent();
         return delete;
