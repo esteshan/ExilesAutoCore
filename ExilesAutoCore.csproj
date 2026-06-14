@@ -10,6 +10,26 @@
     <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
     <EmbedAllSources>true</EmbedAllSources>
   </PropertyGroup>
+  <!-- Bundle author-supplied builds: zip the included_builds folder and embed the zip into the DLL so
+       it travels with the plugin (only the DLL is copied to the runtime dir). The seeding code extracts
+       it into the user's config builds folder on first run.
+       The EmbeddedResource is declared statically so it's in the resource list at evaluation time; the
+       ZipIncludedBuilds target just (re)creates the file before the compiler reads it. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(IntermediateOutputPath)included_builds.zip">
+      <LogicalName>ExilesAutoCore.included_builds.zip</LogicalName>
+      <Visible>false</Visible>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <Target Name="ZipIncludedBuilds" BeforeTargets="CoreCompile">
+    <MakeDir Directories="$(MSBuildProjectDirectory)\included_builds" Condition="!Exists('$(MSBuildProjectDirectory)\included_builds')" />
+    <MakeDir Directories="$(IntermediateOutputPath)" Condition="!Exists('$(IntermediateOutputPath)')" />
+    <ZipDirectory SourceDirectory="$(MSBuildProjectDirectory)\included_builds"
+                  DestinationFile="$(IntermediateOutputPath)included_builds.zip"
+                  Overwrite="true" />
+  </Target>
+
   <!-- Reference the host's DLLs so versions match exactly; never copy them locally. -->
   <ItemGroup>
     <Reference Include="ExileCore2">
