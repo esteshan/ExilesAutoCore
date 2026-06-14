@@ -19,24 +19,32 @@ public static class ConditionEditor
     /// <summary>Set per-frame by the plugin. When true, the expanded editor shows the raw kind dropdown.</summary>
     public static bool AdvancedMode;
 
+    private enum ConditionEdit
+    {
+        None,
+        Delete,
+        MoveUp,
+        MoveDown,
+    }
+
     public static void Draw(List<Condition> conditions, GameState state)
     {
-        var toDelete = -1;
+        var edit = ConditionEdit.None;
+        var editIndex = -1;
         for (var i = 0; i < conditions.Count; i++)
         {
             ImGui.PushID(i);
-            if (DrawCondition(conditions[i], state))
+            var result = DrawCondition(conditions[i], state);
+            if (result != ConditionEdit.None)
             {
-                toDelete = i;
+                edit = result;
+                editIndex = i;
             }
 
             ImGui.PopID();
         }
 
-        if (toDelete >= 0)
-        {
-            conditions.RemoveAt(toDelete);
-        }
+        ApplyEdit(conditions, edit, editIndex);
 
         // Grouped "Add condition" menu: pick by category instead of a flat list of technical names.
         if (ImGui.Button("Add condition"))
@@ -83,9 +91,30 @@ public static class ConditionEditor
         }
     }
 
-    /// <summary>Draws one condition row with only the inputs its kind needs. Returns true to delete.</summary>
-    private static bool DrawCondition(Condition c, GameState state)
+    // Applies a single structural edit per frame, after the draw loop, so we never mutate mid-iteration.
+    private static void ApplyEdit(List<Condition> conditions, ConditionEdit edit, int index)
     {
+        switch (edit)
+        {
+            case ConditionEdit.Delete:
+                conditions.RemoveAt(index);
+                break;
+
+            case ConditionEdit.MoveUp when index > 0:
+                (conditions[index - 1], conditions[index]) = (conditions[index], conditions[index - 1]);
+                break;
+
+            case ConditionEdit.MoveDown when index < conditions.Count - 1:
+                (conditions[index + 1], conditions[index]) = (conditions[index], conditions[index + 1]);
+                break;
+        }
+    }
+
+    /// <summary>Draws one condition row with only the inputs its kind needs. Returns the structural edit (if any) the user requested this frame.</summary>
+    private static ConditionEdit DrawCondition(Condition c, GameState state)
+    {
+        var edit = ConditionEdit.None;
+
         Controls.StatusDot(c.Evaluate(state));
         ImGui.SameLine();
 
@@ -94,12 +123,28 @@ public static class ConditionEditor
         var open = ImGui.TreeNodeEx($"{c.Describe()}###cond");
         ImGui.PopStyleColor();
 
+        // Reorder buttons mirror the rule list's up/dn pattern so conditions stay scannable.
         ImGui.SameLine();
-        var delete = ImGui.SmallButton("x");
+        if (ImGui.SmallButton("up"))
+        {
+            edit = ConditionEdit.MoveUp;
+        }
+
+        ImGui.SameLine();
+        if (ImGui.SmallButton("dn"))
+        {
+            edit = ConditionEdit.MoveDown;
+        }
+
+        ImGui.SameLine();
+        if (ImGui.SmallButton("x"))
+        {
+            edit = ConditionEdit.Delete;
+        }
 
         if (!open)
         {
-            return delete;
+            return edit;
         }
 
         ImGui.Indent();
@@ -321,7 +366,7 @@ public static class ConditionEditor
 
         ImGui.Unindent();
         ImGui.TreePop();
-        return delete;
+        return edit;
     }
 
     // Tints a condition's summary by its category so a step's conditions are scannable at a glance.
