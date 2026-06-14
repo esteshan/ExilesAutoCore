@@ -199,14 +199,25 @@ public static class ConditionEditor
                 SameLineValue(c);
                 break;
 
+            case ConditionKind.MonsterCullable:
+                SameLineRange(c);
+                DrawCullThresholds(c);
+                break;
+
             case ConditionKind.MonsterIsTargeted:
             case ConditionKind.MonsterIsTargetable:
             case ConditionKind.MonsterInvincible:
+            case ConditionKind.MonsterOnLowLife:
+            case ConditionKind.MonsterNearby:
                 SameLineRange(c);
                 SameLineRarity(c);
                 break;
 
             case ConditionKind.FlaskActive:
+                SameLineFlaskSlot(c);
+                SameLineBool(c, "active", "not active");
+                break;
+
             case ConditionKind.FlaskReady:
                 SameLineFlaskSlot(c);
                 break;
@@ -320,6 +331,19 @@ public static class ConditionEditor
         }
 
         SameLineBool(c, "is affected", "not affected");
+    }
+
+    // Per-rarity life% thresholds for the cullable condition, each on its own line under the row.
+    private static void DrawCullThresholds(Condition c)
+    {
+        ImGui.SetNextItemWidth(70);
+        ImGui.InputFloat("Normal life% <=", ref c.CullNormal);
+        ImGui.SetNextItemWidth(70);
+        ImGui.InputFloat("Magic life% <=", ref c.CullMagic);
+        ImGui.SetNextItemWidth(70);
+        ImGui.InputFloat("Rare life% <=", ref c.CullRare);
+        ImGui.SetNextItemWidth(70);
+        ImGui.InputFloat("Unique life% <=", ref c.CullUnique);
     }
 
     private static void SameLineFlaskSlot(Condition c)

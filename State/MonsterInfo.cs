@@ -32,6 +32,9 @@ public sealed class MonsterInfo : EntityInfo
     /// <summary>Raw IsHeavyStunned game stat: 0 = not heavy-stunned, 1 = heavy-stunned.</summary>
     public int HeavyStun => Stats[GameStat.IsHeavyStunned].Value;
 
+    /// <summary>True when the game flags this monster as on low life (its own low-life threshold).</summary>
+    public bool OnLowLife => Stats[GameStat.OnLowLife].Value != 0;
+
     /// <summary>Convenience flag: true when <see cref="HeavyStun"/> is non-zero.</summary>
     public bool IsHeavyStunned => HeavyStun != 0;
 

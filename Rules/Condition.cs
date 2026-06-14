@@ -68,6 +68,9 @@ public enum ConditionKind
     PlayerHasAilment,
     WeaponSet,
     SkillUseStage,
+    MonsterOnLowLife,
+    MonsterNearby,
+    MonsterCullable,
 }
 
 /// <summary>
@@ -106,6 +109,12 @@ public sealed class Condition
     /// <summary>Which flask slot (1 or 2) the flask conditions check.</summary>
     public int FlaskSlot = 1;
 
+    // Per-rarity life% thresholds for the "cullable" check. Defaults match Killing Palm.
+    public float CullNormal = 35;
+    public float CullMagic = 20;
+    public float CullRare = 10;
+    public float CullUnique = 5;
+
     /// <summary>Evaluates this single check against the current frame's state.</summary>
     public bool Evaluate(GameState state)
     {
@@ -141,7 +150,7 @@ public sealed class Condition
             ConditionKind.MonsterInvincible => state.Monsters(Range, Rarity).Any(m => m.IsInvincible),
             ConditionKind.SkillOffCooldown => !state.Skills[Text].OnCooldown,
             ConditionKind.SkillManaAvailable => state.Skills[Text].ManaCost <= (state.Vitals?.Mana.Current ?? 0),
-            ConditionKind.FlaskActive => state.FlaskActive(FlaskSlot),
+            ConditionKind.FlaskActive => state.FlaskActive(FlaskSlot) == BoolValue,
             ConditionKind.FlaskReady => state.FlaskReady(FlaskSlot),
             ConditionKind.FlaskCharges => Compare(state.FlaskCharges(FlaskSlot)),
             ConditionKind.InTown => state.IsInTown == BoolValue,
@@ -153,6 +162,9 @@ public sealed class Condition
             ConditionKind.PlayerHasAilment => Ailments.IsActive(state, Text) == BoolValue,
             ConditionKind.WeaponSet => Compare(state.ActiveWeaponSetIndex),
             ConditionKind.SkillUseStage => Compare(state.Skills[Text].UseStage),
+            ConditionKind.MonsterOnLowLife => state.Monsters(Range, Rarity).Any(m => m.OnLowLife),
+            ConditionKind.MonsterNearby => state.MonsterCount(Range, Rarity) >= 1,
+            ConditionKind.MonsterCullable => state.Monsters(Range, MonsterRarity.Any).Any(IsCullable),
             _ => false,
         };
     }
@@ -185,7 +197,7 @@ public sealed class Condition
         ConditionKind.MonsterInvincible => $"A monster ({Rarity}, <={Range}) is invincible",
         ConditionKind.SkillOffCooldown => $"Skill '{Text}' is off cooldown",
         ConditionKind.SkillManaAvailable => $"Skill '{Text}' has mana to cast",
-        ConditionKind.FlaskActive => $"Flask {FlaskSlot} is active",
+        ConditionKind.FlaskActive => BoolValue ? $"Flask {FlaskSlot} is active" : $"Flask {FlaskSlot} is not active",
         ConditionKind.FlaskReady => $"Flask {FlaskSlot} is ready",
         ConditionKind.FlaskCharges => $"Flask {FlaskSlot} charges {Word} {Value:0}",
         ConditionKind.InTown => BoolValue ? "In town" : "Not in town",
@@ -197,6 +209,9 @@ public sealed class Condition
         ConditionKind.PlayerHasAilment => BoolValue ? $"Affected by {Text}" : $"Not affected by {Text}",
         ConditionKind.WeaponSet => $"Weapon set {Word} {Value:0}",
         ConditionKind.SkillUseStage => $"Skill '{Text}' use-stage {Word} {Value:0}",
+        ConditionKind.MonsterOnLowLife => $"A monster ({Rarity}, <={Range}) is on low life",
+        ConditionKind.MonsterNearby => $"A {Rarity} monster is nearby (<={Range})",
+        ConditionKind.MonsterCullable => $"A cullable monster nearby (<={Range}; N{CullNormal:0}/M{CullMagic:0}/R{CullRare:0}/U{CullUnique:0})",
         _ => Kind.ToString(),
     };
 
@@ -207,6 +222,20 @@ public sealed class Condition
         MouseButton.Middle => Keys.MButton,
         _ => Keys.LButton,
     };
+
+    // A monster is cullable when its life% is at/below the threshold for its own rarity.
+    private bool IsCullable(MonsterInfo monster)
+    {
+        var hp = monster.Vitals.HP.Percent;
+        return monster.Rarity switch
+        {
+            MonsterRarity.Normal => hp <= CullNormal,
+            MonsterRarity.Magic => hp <= CullMagic,
+            MonsterRarity.Rare => hp <= CullRare,
+            MonsterRarity.Unique => hp <= CullUnique,
+            _ => false,
+        };
+    }
 
     private bool Compare(double actual) => Operator switch
     {

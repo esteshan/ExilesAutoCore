@@ -27,8 +27,11 @@ public static class ConditionMeta
     /// <summary>All user-addable kinds, grouped. AlwaysTrue is intentionally omitted (it's the default placeholder).</summary>
     public static readonly IReadOnlyList<Entry> All = new[]
     {
+        new Entry(ConditionKind.MonsterNearby, ConditionCategory.Monster, "Rarity nearby"),
         new Entry(ConditionKind.MonsterCount, ConditionCategory.Monster, "Monsters in range"),
         new Entry(ConditionKind.MonsterLifePercent, ConditionCategory.Monster, "Life %"),
+        new Entry(ConditionKind.MonsterOnLowLife, ConditionCategory.Monster, "On low life"),
+        new Entry(ConditionKind.MonsterCullable, ConditionCategory.Monster, "Cullable (per-rarity life %)"),
         new Entry(ConditionKind.MonsterHasBuff, ConditionCategory.Monster, "Has buff / debuff"),
         new Entry(ConditionKind.MonsterMissingBuff, ConditionCategory.Monster, "Missing buff / debuff"),
         new Entry(ConditionKind.MonsterHeavyStunned, ConditionCategory.Monster, "Heavy-stun state"),
