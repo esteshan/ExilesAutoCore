@@ -205,10 +205,77 @@ public static class ConditionEditor
                 break;
 
             case ConditionKind.MonsterIsTargeted:
+                MonsterStateRow(c, "is targeted", "not targeted");
+                break;
             case ConditionKind.MonsterIsTargetable:
+                MonsterStateRow(c, "is targetable", "not targetable");
+                break;
             case ConditionKind.MonsterInvincible:
+                MonsterStateRow(c, "is invincible", "is not invincible");
+                break;
             case ConditionKind.MonsterOnLowLife:
+                MonsterStateRow(c, "is on low life", "not on low life");
+                break;
+            case ConditionKind.MonsterOnFullLife:
+                MonsterStateRow(c, "is on full life", "not on full life");
+                break;
+            case ConditionKind.MonsterCannotDie:
+                MonsterStateRow(c, "cannot die", "can die");
+                break;
+            case ConditionKind.MonsterCannotBeStunned:
+                MonsterStateRow(c, "cannot be stunned", "can be stunned");
+                break;
+            case ConditionKind.MonsterFrozen:
+                MonsterStateRow(c, "is frozen", "not frozen");
+                break;
+            case ConditionKind.MonsterLightStunned:
+                MonsterStateRow(c, "is light-stunned", "not light-stunned");
+                break;
+            case ConditionKind.MonsterChilled:
+                MonsterStateRow(c, "is chilled", "not chilled");
+                break;
+            case ConditionKind.MonsterShocked:
+                MonsterStateRow(c, "is shocked", "not shocked");
+                break;
+            case ConditionKind.MonsterElectrocuted:
+                MonsterStateRow(c, "is electrocuted", "not electrocuted");
+                break;
+            case ConditionKind.MonsterBleeding:
+                MonsterStateRow(c, "is bleeding", "not bleeding");
+                break;
+            case ConditionKind.MonsterPoisoned:
+                MonsterStateRow(c, "is poisoned", "not poisoned");
+                break;
+            case ConditionKind.MonsterIgnited:
+                MonsterStateRow(c, "is ignited", "not ignited");
+                break;
+            case ConditionKind.MonsterSapped:
+                MonsterStateRow(c, "is sapped", "not sapped");
+                break;
+            case ConditionKind.MonsterScorched:
+                MonsterStateRow(c, "is scorched", "not scorched");
+                break;
+            case ConditionKind.MonsterMaimed:
+                MonsterStateRow(c, "is maimed", "not maimed");
+                break;
+            case ConditionKind.MonsterHindered:
+                MonsterStateRow(c, "is hindered", "not hindered");
+                break;
+            case ConditionKind.MonsterPinned:
+                MonsterStateRow(c, "is pinned", "not pinned");
+                break;
+            case ConditionKind.MonsterImmobilised:
+                MonsterStateRow(c, "is immobilised", "not immobilised");
+                break;
+            case ConditionKind.MonsterDazed:
+                MonsterStateRow(c, "is dazed", "not dazed");
+                break;
+            case ConditionKind.MonsterBlinded:
+                MonsterStateRow(c, "is blinded", "not blinded");
+                break;
+
             case ConditionKind.MonsterNearby:
+            case ConditionKind.NoMonsterInvincible:
                 SameLineRange(c);
                 SameLineRarity(c);
                 break;
@@ -357,6 +424,15 @@ public static class ConditionEditor
         {
             c.FlaskSlot = index + 1;
         }
+    }
+
+    // A monster-state row: range + rarity filter plus an is/is-not toggle. Shared by every
+    // boolean monster-state condition (invincible, frozen, the ailments, ...).
+    private static void MonsterStateRow(Condition c, string trueLabel, string falseLabel)
+    {
+        SameLineRange(c);
+        SameLineRarity(c);
+        SameLineBool(c, trueLabel, falseLabel);
     }
 
     // A two-option toggle for boolean conditions (e.g. "in town" / "not in town").
