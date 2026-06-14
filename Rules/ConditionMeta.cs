@@ -64,7 +64,8 @@ public static class ConditionMeta
         new Entry(ConditionKind.MouseButtonHeld, ConditionCategory.Input, "Mouse button held"),
 
         new Entry(ConditionKind.FlaskActive, ConditionCategory.Flask, "Active"),
-        new Entry(ConditionKind.FlaskReady, ConditionCategory.Flask, "Ready"),
+        new Entry(ConditionKind.FlaskReady, ConditionCategory.Flask, "Ready (has charges)"),
+        new Entry(ConditionKind.FlaskUsable, ConditionCategory.Flask, "Usable (smart)"),
         new Entry(ConditionKind.FlaskCharges, ConditionCategory.Flask, "Charges"),
 
         new Entry(ConditionKind.InTown, ConditionCategory.Area, "In town"),

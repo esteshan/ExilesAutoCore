@@ -71,6 +71,7 @@ public enum ConditionKind
     MonsterOnLowLife,
     MonsterNearby,
     MonsterCullable,
+    FlaskUsable,
 }
 
 /// <summary>
@@ -152,6 +153,7 @@ public sealed class Condition
             ConditionKind.SkillManaAvailable => state.Skills[Text].ManaCost <= (state.Vitals?.Mana.Current ?? 0),
             ConditionKind.FlaskActive => state.FlaskActive(FlaskSlot) == BoolValue,
             ConditionKind.FlaskReady => state.FlaskReady(FlaskSlot),
+            ConditionKind.FlaskUsable => state.FlaskUsable(FlaskSlot),
             ConditionKind.FlaskCharges => Compare(state.FlaskCharges(FlaskSlot)),
             ConditionKind.InTown => state.IsInTown == BoolValue,
             ConditionKind.InHideout => state.IsInHideout == BoolValue,
@@ -199,6 +201,7 @@ public sealed class Condition
         ConditionKind.SkillManaAvailable => $"Skill '{Text}' has mana to cast",
         ConditionKind.FlaskActive => BoolValue ? $"Flask {FlaskSlot} is active" : $"Flask {FlaskSlot} is not active",
         ConditionKind.FlaskReady => $"Flask {FlaskSlot} is ready",
+        ConditionKind.FlaskUsable => $"Flask {FlaskSlot} can actually be used",
         ConditionKind.FlaskCharges => $"Flask {FlaskSlot} charges {Word} {Value:0}",
         ConditionKind.InTown => BoolValue ? "In town" : "Not in town",
         ConditionKind.InHideout => BoolValue ? "In hideout" : "Not in hideout",

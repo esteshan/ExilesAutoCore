@@ -219,6 +219,7 @@ public static class ConditionEditor
                 break;
 
             case ConditionKind.FlaskReady:
+            case ConditionKind.FlaskUsable:
                 SameLineFlaskSlot(c);
                 break;
 

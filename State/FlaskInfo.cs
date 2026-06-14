@@ -6,6 +6,9 @@ using ExileCore2.PoEMemory.MemoryObjects;
 
 namespace ExilesAutoCore.State;
 
+/// <summary>Whether a flask recovers life, mana, or is something else (utility/unique).</summary>
+public enum FlaskKind { Other, Life, Mana }
+
 /// <summary>
 /// A single flask slot's state. <see cref="Active"/> is whether its effect is currently running,
 /// <see cref="CanBeUsed"/> is whether it has enough charges to use right now.
@@ -18,13 +21,14 @@ public sealed record FlaskInfo(
     int ChargesPerUse,
     string ClassName,
     string BaseName,
-    string UniqueName)
+    string UniqueName,
+    FlaskKind Kind)
 {
     /// <summary>The unique name if the flask is unique, otherwise its base type name.</summary>
     public string Name => !string.IsNullOrEmpty(UniqueName) ? UniqueName : BaseName;
 
     /// <summary>An empty slot (no flask equipped, or memory not yet readable).</summary>
-    public static FlaskInfo Empty => new(false, false, 0, 1, 1, "", "", "");
+    public static FlaskInfo Empty => new(false, false, 0, 1, 1, "", "", "", FlaskKind.Other);
 
     public static FlaskInfo From(GameController state, ServerInventory.InventSlotItem flaskItem)
     {
@@ -37,11 +41,13 @@ public sealed record FlaskInfo(
 
         var active = false;
         var canBeUsed = false;
+        var kind = FlaskKind.Other;
         if (state.Player.TryGetComponent<Buffs>(out var playerBuffs) &&
             flaskItem.Item.TryGetComponent<Flask>(out var flask))
         {
             active = GetFlaskBuffNames(flask).Any(playerBuffs.HasBuff);
             canBeUsed = (charges?.NumCharges ?? 0) >= (charges?.ChargesPerUse ?? 1);
+            kind = FlaskKindOf(flask);
         }
 
         var className = "";
@@ -62,7 +68,21 @@ public sealed record FlaskInfo(
             charges?.ChargesPerUse ?? 1,
             className,
             baseName,
-            uniqueName);
+            uniqueName,
+            kind);
+    }
+
+    // The flask "type" byte: 1 = life, 2 = mana, 3 = life+mana; anything else is utility/unique.
+    private static FlaskKind FlaskKindOf(Flask flask)
+    {
+        var type = flask.M.Read<int>(flask.Address + 0x28, 0x20);
+        return type switch
+        {
+            1 => FlaskKind.Life,
+            2 => FlaskKind.Mana,
+            3 => FlaskKind.Life,
+            _ => FlaskKind.Other,
+        };
     }
 
     private static readonly string[] LifeFlaskBuffs = { "flask_effect_life" };

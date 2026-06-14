@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ExilesAutoCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4214511b9d18ebe9ba43a177954a0b70aa53c64a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e05aeb38041671f493e4d8bf1ee11d418bb2b601")]
 [assembly: System.Reflection.AssemblyProductAttribute("ExilesAutoCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ExilesAutoCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
