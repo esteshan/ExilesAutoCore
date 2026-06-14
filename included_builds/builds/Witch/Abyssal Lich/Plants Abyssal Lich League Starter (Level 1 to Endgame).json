@@ -1,0 +1,232 @@
+{
+  "Name": "EntangleLich",
+  "ShowcaseUrl": "https://mobalytics.gg/poe-2/builds/plants-lich-deadrabb1t",
+  "Rules": [
+    {
+      "Enabled": true,
+      "Name": "BoneStorm",
+      "EnabledInMaps": true,
+      "EnabledInTown": false,
+      "EnabledInHideout": false,
+      "EnabledInPeacefulAreas": false,
+      "Action": {
+        "InputKind": 0,
+        "Key": 0,
+        "AutoFace": false,
+        "AutoFaceRarity": 15,
+        "AutoFaceRange": 100,
+        "InputLabel": "None"
+      },
+      "Conditions": [
+        {
+          "Kind": 11,
+          "Operator": 3,
+          "Value": 1.0,
+          "Text": "",
+          "Range": 50,
+          "Rarity": 15,
+          "BoolValue": true,
+          "MouseButton": 1,
+          "FlaskSlot": 1,
+          "CullNormal": 35.0,
+          "CullMagic": 20.0,
+          "CullRare": 10.0,
+          "CullUnique": 5.0
+        }
+      ],
+      "Cooldown": 0.0,
+      "OnCooldown": false
+    }
+  ],
+  "Combos": [
+    {
+      "Enabled": true,
+      "Name": "EntangleCombo",
+      "Steps": [
+        {
+          "Name": "Entangle",
+          "Action": {
+            "InputKind": 0,
+            "Key": 81,
+            "AutoFace": false,
+            "AutoFaceRarity": 15,
+            "AutoFaceRange": 70,
+            "InputLabel": "Q"
+          },
+          "Conditions": [
+            {
+              "Kind": 8,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "EntanglePlayer",
+              "Range": 50,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            },
+            {
+              "Kind": 15,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "entangle_attached_vine",
+              "Range": 100,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            },
+            {
+              "Kind": 12,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "",
+              "Range": 100,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            }
+          ],
+          "DelayAfterMs": 150
+        },
+        {
+          "Name": "ThunderStorm",
+          "Action": {
+            "InputKind": 0,
+            "Key": 87,
+            "AutoFace": false,
+            "AutoFaceRarity": 15,
+            "AutoFaceRange": 70,
+            "InputLabel": "W"
+          },
+          "Conditions": [
+            {
+              "Kind": 8,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "ThunderstormPlayer",
+              "Range": 50,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            },
+            {
+              "Kind": 15,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "wet",
+              "Range": 100,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            },
+            {
+              "Kind": 14,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "entangle_attached_vine",
+              "Range": 100,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            },
+            {
+              "Kind": 12,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "",
+              "Range": 100,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            }
+          ],
+          "DelayAfterMs": 150
+        },
+        {
+          "Name": "ThrashingVines",
+          "Action": {
+            "InputKind": 0,
+            "Key": 69,
+            "AutoFace": false,
+            "AutoFaceRarity": 15,
+            "AutoFaceRange": 70,
+            "InputLabel": "E"
+          },
+          "Conditions": [
+            {
+              "Kind": 8,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "ThrashingVinesPlayer",
+              "Range": 50,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            },
+            {
+              "Kind": 12,
+              "Operator": 3,
+              "Value": 1.0,
+              "Text": "",
+              "Range": 100,
+              "Rarity": 15,
+              "BoolValue": true,
+              "MouseButton": 0,
+              "FlaskSlot": 1,
+              "CullNormal": 35.0,
+              "CullMagic": 20.0,
+              "CullRare": 10.0,
+              "CullUnique": 5.0
+            }
+          ],
+          "DelayAfterMs": 150
+        }
+      ],
+      "EnabledInMaps": true,
+      "EnabledInTown": false,
+      "EnabledInHideout": false,
+      "EnabledInPeacefulAreas": false,
+      "ResetAfterIdleMs": 2000,
+      "CurrentStep": 0
+    }
+  ]
+}
