@@ -1,0 +1,13 @@
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.GeneratedMSBuildEditorConfig.editorconfig
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.AssemblyInfoInputs.cache
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.AssemblyInfo.cs
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.csproj.CoreCompileInputs.cache
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.sourcelink.json
+C:\ExileCore\Plugins\source\ExilesAutoCore\bin\Debug\net8.0-windows\ExilesAutoCore.deps.json
+C:\ExileCore\Plugins\source\ExilesAutoCore\bin\Debug\net8.0-windows\ExilesAutoCore.runtimeconfig.json
+C:\ExileCore\Plugins\source\ExilesAutoCore\bin\Debug\net8.0-windows\ExilesAutoCore.dll
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.csproj.AssemblyReference.cache
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.dll
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\refint\ExilesAutoCore.dll
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ExilesAutoCore.genruntimeconfig.cache
+C:\ExileCore\Plugins\source\ExilesAutoCore\obj\Debug\net8.0-windows\ref\ExilesAutoCore.dll

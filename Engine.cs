@@ -62,7 +62,7 @@ public sealed class Engine
 
             Execute(controller, state, rule.Action);
             rule.MarkFired();
-            LastAction = $"{rule.Name} -> pressed {rule.Action.Key}";
+            LastAction = $"{rule.Name} -> pressed {rule.Action.InputLabel}";
             return true;
         }
 
@@ -87,14 +87,14 @@ public sealed class Engine
             var stepNumber = combo.CurrentStep + 1;
             Execute(controller, state, step.Action);
             combo.OnFired();
-            LastAction = $"{combo.Name} step {stepNumber} -> pressed {step.Action.Key}";
+            LastAction = $"{combo.Name} step {stepNumber} -> pressed {step.Action.InputLabel}";
             return true;
         }
 
         return false;
     }
 
-    // Performs one action: aim at a target first if requested, then press the key.
+    // Performs one action: aim at a target first if requested, then press the key or click a mouse button.
     private static void Execute(GameController controller, GameState state, SkillAction action)
     {
         if (action.AutoFace)
@@ -108,7 +108,14 @@ public sealed class Engine
             }
         }
 
-        InputHelper.SendInputPress(new HotkeyNodeValue(action.Key));
+        // Keys.LButton/RButton route through the same input path as keyboard keys in PoE2.
+        var key = action.InputKind switch
+        {
+            SkillInputKind.LeftClick => Keys.LButton,
+            SkillInputKind.RightClick => Keys.RButton,
+            _ => action.Key,
+        };
+        InputHelper.SendInputPress(new HotkeyNodeValue(key));
     }
 
     /// <summary>The safety gate: returns false (with a reason) whenever it would be unsafe to act.</summary>

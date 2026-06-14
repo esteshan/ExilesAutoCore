@@ -76,7 +76,7 @@ public sealed class RuleBuilder
         ImGui.Checkbox("##enabled", ref rule.Enabled);
         ImGui.SameLine();
 
-        if (!ImGui.CollapsingHeader($"{rule.Name}  (key {rule.Action.Key})###rule"))
+        if (!ImGui.CollapsingHeader($"{rule.Name}  (key {rule.Action.InputLabel})###rule"))
         {
             return edit;
         }
