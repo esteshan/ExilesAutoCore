@@ -218,7 +218,7 @@ public sealed class Condition
             ConditionKind.SkillUseStage => Compare(state.Skills[Text].UseStage),
             ConditionKind.MonsterOnLowLife => state.Monsters(Range, Rarity).Any(m => m.OnLowLife == BoolValue),
             ConditionKind.MonsterNearby => state.MonsterCount(Range, Rarity) >= 1,
-            ConditionKind.MonsterCullable => state.Monsters(Range, MonsterRarity.Any).Any(IsCullable),
+            ConditionKind.MonsterCullable => state.Monsters(Range, MonsterRarity.Any).Any(m => IsCullable(m) == BoolValue),
             _ => false,
         };
     }
@@ -288,7 +288,7 @@ public sealed class Condition
         ConditionKind.SkillUseStage => $"Skill '{Text}' use-stage {Word} {Value:0}",
         ConditionKind.MonsterOnLowLife => $"A monster ({Rarity}, <={Range}) is {(BoolValue ? "" : "not ")}on low life",
         ConditionKind.MonsterNearby => $"A {Rarity} monster is nearby (<={Range})",
-        ConditionKind.MonsterCullable => $"A cullable monster nearby (<={Range}; N{CullNormal:0}/M{CullMagic:0}/R{CullRare:0}/U{CullUnique:0})",
+        ConditionKind.MonsterCullable => $"A monster (<={Range}) is {(BoolValue ? "" : "not ")}cullable (N{CullNormal:0}/M{CullMagic:0}/R{CullRare:0}/U{CullUnique:0})",
         _ => Kind.ToString(),
     };
 

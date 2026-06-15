@@ -246,6 +246,7 @@ public static class ConditionEditor
 
             case ConditionKind.MonsterCullable:
                 SameLineRange(c);
+                SameLineBool(c, "is cullable", "not cullable");
                 DrawCullThresholds(c);
                 break;
 
