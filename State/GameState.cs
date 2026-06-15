@@ -151,26 +151,5 @@ public sealed class GameState
     /// <summary>Current charges on the given flask slot (0 if empty). Slot is 1-based.</summary>
     public int FlaskCharges(int slot) => GetFlask(slot)?.Charges ?? 0;
 
-    /// <summary>
-    /// True only when the flask would actually do something now: it has charges, isn't already active,
-    /// and — for a life/mana flask — the matching resource isn't full. This is the real "can be used"
-    /// (plain charges alone is true even at full life, which causes flask spam). Slot is 1-based.
-    /// </summary>
-    public bool FlaskUsable(int slot)
-    {
-        var flask = GetFlask(slot);
-        if (flask == null || !flask.CanBeUsed || flask.Active)
-        {
-            return false;
-        }
-
-        return flask.Kind switch
-        {
-            FlaskKind.Life => Vitals != null && Vitals.HP.Current < Vitals.HP.Max,
-            FlaskKind.Mana => Vitals != null && Vitals.Mana.Current < Vitals.Mana.Max,
-            _ => true,
-        };
-    }
-
     private FlaskInfo GetFlask(int slot) => Flasks != null && slot is >= 1 and <= 2 ? Flasks[slot - 1] : null;
 }

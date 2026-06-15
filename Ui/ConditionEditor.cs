@@ -331,7 +331,7 @@ public static class ConditionEditor
                 break;
 
             case ConditionKind.FlaskReady:
-            case ConditionKind.FlaskUsable:
+            case ConditionKind.FlaskUsableRetired:
                 SameLineFlaskSlot(c);
                 break;
 
@@ -339,6 +339,13 @@ public static class ConditionEditor
                 SameLineFlaskSlot(c);
                 SameLineComparison(c);
                 SameLineValue(c);
+                break;
+
+            // These read the flask_effect_life / flask_effect_mana player buffs directly, so they
+            // apply to any slot and need only an active / not-active toggle.
+            case ConditionKind.FlaskLifeEffect:
+            case ConditionKind.FlaskManaEffect:
+                SameLineBool(c, "effect active", "effect not active");
                 break;
 
             case ConditionKind.InTown:

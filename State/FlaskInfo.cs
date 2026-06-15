@@ -6,9 +6,6 @@ using ExileCore2.PoEMemory.MemoryObjects;
 
 namespace ExilesAutoCore.State;
 
-/// <summary>Whether a flask recovers life, mana, or is something else (utility/unique).</summary>
-public enum FlaskKind { Other, Life, Mana }
-
 /// <summary>
 /// A single flask slot's state. <see cref="Active"/> is whether its effect is currently running,
 /// <see cref="CanBeUsed"/> is whether it has enough charges to use right now.
@@ -21,14 +18,19 @@ public sealed record FlaskInfo(
     int ChargesPerUse,
     string ClassName,
     string BaseName,
-    string UniqueName,
-    FlaskKind Kind)
+    string UniqueName)
 {
+    /// <summary>The player buff granted while a life flask's effect is running.</summary>
+    public const string LifeEffectBuff = "flask_effect_life";
+
+    /// <summary>The player buff granted while a mana flask's effect is running.</summary>
+    public const string ManaEffectBuff = "flask_effect_mana";
+
     /// <summary>The unique name if the flask is unique, otherwise its base type name.</summary>
     public string Name => !string.IsNullOrEmpty(UniqueName) ? UniqueName : BaseName;
 
     /// <summary>An empty slot (no flask equipped, or memory not yet readable).</summary>
-    public static FlaskInfo Empty => new(false, false, 0, 1, 1, "", "", "", FlaskKind.Other);
+    public static FlaskInfo Empty => new(false, false, 0, 1, 1, "", "", "");
 
     public static FlaskInfo From(GameController state, ServerInventory.InventSlotItem flaskItem)
     {
@@ -41,13 +43,11 @@ public sealed record FlaskInfo(
 
         var active = false;
         var canBeUsed = false;
-        var kind = FlaskKind.Other;
         if (state.Player.TryGetComponent<Buffs>(out var playerBuffs) &&
             flaskItem.Item.TryGetComponent<Flask>(out var flask))
         {
-            active = GetFlaskBuffNames(flask).Any(playerBuffs.HasBuff);
-            canBeUsed = (charges?.NumCharges ?? 0) >= (charges?.ChargesPerUse ?? 1);
-            kind = FlaskKindOf(flask);
+            active = BuffNamesForType(flask, ReadFlaskType(flask)).Any(playerBuffs.HasBuff);
+            canBeUsed = HasEnoughCharges(charges);
         }
 
         var className = "";
@@ -68,43 +68,40 @@ public sealed record FlaskInfo(
             charges?.ChargesPerUse ?? 1,
             className,
             baseName,
-            uniqueName,
-            kind);
+            uniqueName);
     }
 
-    // The flask "type" byte: 1 = life, 2 = mana, 3 = life+mana; anything else is utility/unique.
-    private static FlaskKind FlaskKindOf(Flask flask)
+    // A flask can only be used when it has at least one *full use* worth of charges. Merely having
+    // some charges isn't enough: a flask with 7/8-per-use charges still reports >0 charges, but
+    // pressing it does nothing — the spam source. We require a positive per-use so a bad/zero read
+    // fails safe to "not usable" rather than "always usable".
+    private static bool HasEnoughCharges(Charges charges)
     {
-        var type = flask.M.Read<int>(flask.Address + 0x28, 0x20);
-        return type switch
-        {
-            1 => FlaskKind.Life,
-            2 => FlaskKind.Mana,
-            3 => FlaskKind.Life,
-            _ => FlaskKind.Other,
-        };
+        var perUse = charges?.ChargesPerUse ?? 1;
+        return perUse > 0 && (charges?.NumCharges ?? 0) >= perUse;
     }
 
-    private static readonly string[] LifeFlaskBuffs = { "flask_effect_life" };
+    // The flask "type" byte lives at a fixed memory offset and identifies what the flask recovers:
+    // 1 = life, 2 = mana, 3 = life+mana (hybrid), 4 = utility (its buff name is read from memory).
+    private static int ReadFlaskType(Flask flask) => flask.M.Read<int>(flask.Address + 0x28, 0x20);
 
-    private static readonly string[] ManaFlaskBuffs =
+    // The player buff(s) granted while this flask's effect is running. We match any of these against
+    // the player's buffs to tell whether the slot is currently active.
+    private static IEnumerable<string> BuffNamesForType(Flask flask, int type) => type switch
     {
-        "flask_effect_mana",
+        1 => LifeEffectBuffs,
+        2 => ManaEffectBuffs,
+        3 => LifeEffectBuffs.Concat(ManaEffectBuffs),
+        4 when flask.M.ReadStringU(flask.M.Read<long>(flask.Address + 0x28, 0x18, 0x0)) is { } s and not "" => new[] { s },
+        _ => Enumerable.Empty<string>(),
+    };
+
+    private static readonly string[] LifeEffectBuffs = { LifeEffectBuff };
+
+    private static readonly string[] ManaEffectBuffs =
+    {
+        ManaEffectBuff,
         "flask_effect_mana_not_removed_when_full",
         "flask_instant_mana_recovery_at_end_of_effect",
     };
-
-    // The flask "type" byte lives at a fixed memory offset and tells us which buff(s) the flask grants.
-    private static IEnumerable<string> GetFlaskBuffNames(Flask flask)
-    {
-        var type = flask.M.Read<int>(flask.Address + 0x28, 0x20);
-        return type switch
-        {
-            1 => LifeFlaskBuffs,
-            2 => ManaFlaskBuffs,
-            3 => LifeFlaskBuffs.Concat(ManaFlaskBuffs),
-            4 when flask.M.ReadStringU(flask.M.Read<long>(flask.Address + 0x28, 0x18, 0x0)) is { } s and not "" => new[] { s },
-            _ => Enumerable.Empty<string>(),
-        };
-    }
 }

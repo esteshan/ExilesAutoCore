@@ -71,7 +71,9 @@ public enum ConditionKind
     MonsterOnLowLife,
     MonsterNearby,
     MonsterCullable,
-    FlaskUsable,
+    // Retired: the old "Usable (smart)" condition. Hidden from the UI and treated as FlaskReady, but
+    // kept in place so saved configs that stored this value (40) don't shift every later kind's number.
+    FlaskUsableRetired,
     NoMonsterInvincible,
     MonsterCannotDie,
     MonsterFrozen,
@@ -92,6 +94,8 @@ public enum ConditionKind
     MonsterImmobilised,
     MonsterDazed,
     MonsterBlinded,
+    FlaskLifeEffect,
+    FlaskManaEffect,
 }
 
 /// <summary>
@@ -199,8 +203,10 @@ public sealed class Condition
             ConditionKind.SkillManaAvailable => state.Skills[Text].ManaCost <= (state.Vitals?.Mana.Current ?? 0),
             ConditionKind.FlaskActive => state.FlaskActive(FlaskSlot) == BoolValue,
             ConditionKind.FlaskReady => state.FlaskReady(FlaskSlot),
-            ConditionKind.FlaskUsable => state.FlaskUsable(FlaskSlot),
+            ConditionKind.FlaskUsableRetired => state.FlaskReady(FlaskSlot),
             ConditionKind.FlaskCharges => Compare(state.FlaskCharges(FlaskSlot)),
+            ConditionKind.FlaskLifeEffect => state.Buffs.Has(FlaskInfo.LifeEffectBuff) == BoolValue,
+            ConditionKind.FlaskManaEffect => state.Buffs.Has(FlaskInfo.ManaEffectBuff) == BoolValue,
             ConditionKind.InTown => state.IsInTown == BoolValue,
             ConditionKind.InHideout => state.IsInHideout == BoolValue,
             ConditionKind.InPeacefulArea => state.IsInPeacefulArea == BoolValue,
@@ -266,9 +272,11 @@ public sealed class Condition
         ConditionKind.SkillOffCooldown => $"Skill '{Text}' is off cooldown",
         ConditionKind.SkillManaAvailable => $"Skill '{Text}' has mana to cast",
         ConditionKind.FlaskActive => BoolValue ? $"Flask {FlaskSlot} is active" : $"Flask {FlaskSlot} is not active",
-        ConditionKind.FlaskReady => $"Flask {FlaskSlot} is ready",
-        ConditionKind.FlaskUsable => $"Flask {FlaskSlot} can actually be used",
-        ConditionKind.FlaskCharges => $"Flask {FlaskSlot} charges {Word} {Value:0}",
+        ConditionKind.FlaskReady => $"Flask {FlaskSlot} has enough charges to use",
+        ConditionKind.FlaskUsableRetired => $"Flask {FlaskSlot} has enough charges to use",
+        ConditionKind.FlaskCharges => $"Flask {FlaskSlot} raw charges {Word} {Value:0}",
+        ConditionKind.FlaskLifeEffect => BoolValue ? "Life flask effect active" : "Life flask effect not active",
+        ConditionKind.FlaskManaEffect => BoolValue ? "Mana flask effect active" : "Mana flask effect not active",
         ConditionKind.InTown => BoolValue ? "In town" : "Not in town",
         ConditionKind.InHideout => BoolValue ? "In hideout" : "Not in hideout",
         ConditionKind.InPeacefulArea => BoolValue ? "In a peaceful area" : "Not in a peaceful area",
